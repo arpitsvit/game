@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useGameStore } from '@/lib/game-store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,16 +10,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import {
   Play,
-  FastForward,
   SkipForward,
   Trophy,
   Users,
   Target,
   Activity,
   Zap,
-  ChevronRight,
-  RefreshCw,
 } from 'lucide-react';
+import { LiveMatchView } from './live-match-view';
 
 export function MatchCenter() {
   const {
@@ -28,13 +26,11 @@ export function MatchCenter() {
     teams,
     players,
     userTeamId,
-    simulateMatch,
     playNextMatch,
     processDay,
   } = useGameStore();
 
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [showResult, setShowResult] = useState(false);
+  const [showLiveMatch, setShowLiveMatch] = useState(false);
 
   const match = currentMatch;
   const team1 = match ? teams.find((t) => t.id === match.team1Id) : null;
@@ -60,23 +56,15 @@ export function MatchCenter() {
     );
   };
 
-  const handleSimulate = () => {
-    if (!match) return;
-    setIsSimulating(true);
-    
-    // Simulate with delay for dramatic effect
-    setTimeout(() => {
-      simulateMatch(match.id);
-      setIsSimulating(false);
-      setShowResult(true);
-    }, 2000);
-  };
-
   const handleNextMatch = () => {
     playNextMatch();
     processDay();
-    setShowResult(false);
   };
+  
+  // Show live match simulation view
+  if (showLiveMatch && match && match.status === 'scheduled') {
+    return <LiveMatchView onBack={() => setShowLiveMatch(false)} />;
+  }
 
   if (!currentTournament) {
     return (
@@ -227,23 +215,13 @@ export function MatchCenter() {
               <Button
                 size="lg"
                 className="w-full max-w-md"
-                onClick={handleSimulate}
-                disabled={isSimulating}
+                onClick={() => setShowLiveMatch(true)}
               >
-                {isSimulating ? (
-                  <>
-                    <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                    Simulating Match...
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-5 h-5 mr-2" />
-                    Simulate Match
-                  </>
-                )}
+                <Play className="w-5 h-5 mr-2" />
+                Play Match
               </Button>
               <p className="text-sm text-muted-foreground">
-                The match will be simulated based on team strengths, player form, and fatigue
+                Choose ball-by-ball, over-by-over, or innings simulation mode
               </p>
             </div>
           )}

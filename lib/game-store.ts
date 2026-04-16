@@ -18,6 +18,7 @@ interface GameStore extends GameState {
   // Match actions
   startTournament: () => void;
   simulateMatch: (matchId: string) => Match;
+  finalizeMatch: (matchId: string, match: Match) => void;
   playNextMatch: () => void;
   
   // Training actions
@@ -379,6 +380,100 @@ export const useGameStore = create<GameStore>()(
         });
 
         return completedMatch;
+      },
+
+      finalizeMatch: (matchId: string, completedMatch: Match) => {
+        const state = get();
+        if (!state.currentTournament) return;
+
+        const team1 = state.teams.find((t) => t.id === completedMatch.team1Id)!;
+        const team2 = state.teams.find((t) => t.id === completedMatch.team2Id)!;
+
+        // Update player fatigue and form
+        const updatePlayersAfterMatch = (teamPlayers: typeof state.players, isWinner: boolean) => {
+          return teamPlayers.map((p) => ({
+            ...p,
+            fatigue: Math.min(100, p.fatigue + 15 + Math.floor(Math.random() * 10)),
+            form: Math.max(-20, Math.min(20, p.form + (isWinner ? Math.floor(Math.random() * 5) : Math.floor(Math.random() * 3) - 2))),
+            stats: {
+              ...p.stats,
+              matches: p.stats.matches + 1,
+            },
+          }));
+        };
+
+        const updatedPlayers = state.players.map((p) => {
+          if (p.teamId === completedMatch.winnerId) {
+            return updatePlayersAfterMatch([p], true)[0];
+          }
+          if (p.teamId === team1.id || p.teamId === team2.id) {
+            return updatePlayersAfterMatch([p], false)[0];
+          }
+          return p;
+        });
+
+        // Update points table
+        const newPointsTable = { ...state.currentTournament.pointsTable };
+        const innings1 = completedMatch.innings[0];
+        const innings2 = completedMatch.innings[1];
+        
+        if (innings1 && innings2) {
+          const team1Nrr = (innings1.runs / Math.max(innings1.overs, 1) - innings2.runs / Math.max(innings2.overs, 1));
+          const team2Nrr = -team1Nrr;
+
+          if (completedMatch.winnerId === team1.id) {
+            newPointsTable[team1.id] = {
+              ...newPointsTable[team1.id],
+              played: newPointsTable[team1.id].played + 1,
+              won: newPointsTable[team1.id].won + 1,
+              points: newPointsTable[team1.id].points + 2,
+              nrr: (newPointsTable[team1.id].nrr + team1Nrr) / (newPointsTable[team1.id].played + 1),
+            };
+            newPointsTable[team2.id] = {
+              ...newPointsTable[team2.id],
+              played: newPointsTable[team2.id].played + 1,
+              lost: newPointsTable[team2.id].lost + 1,
+              nrr: (newPointsTable[team2.id].nrr + team2Nrr) / (newPointsTable[team2.id].played + 1),
+            };
+          } else {
+            newPointsTable[team2.id] = {
+              ...newPointsTable[team2.id],
+              played: newPointsTable[team2.id].played + 1,
+              won: newPointsTable[team2.id].won + 1,
+              points: newPointsTable[team2.id].points + 2,
+              nrr: (newPointsTable[team2.id].nrr + team2Nrr) / (newPointsTable[team2.id].played + 1),
+            };
+            newPointsTable[team1.id] = {
+              ...newPointsTable[team1.id],
+              played: newPointsTable[team1.id].played + 1,
+              lost: newPointsTable[team1.id].lost + 1,
+              nrr: (newPointsTable[team1.id].nrr + team1Nrr) / (newPointsTable[team1.id].played + 1),
+            };
+          }
+        }
+
+        const updatedTournament = {
+          ...state.currentTournament,
+          matches: state.currentTournament.matches.map((m) =>
+            m.id === matchId ? completedMatch : m
+          ),
+          pointsTable: newPointsTable,
+        };
+
+        set({
+          currentTournament: updatedTournament,
+          currentMatch: completedMatch,
+          players: updatedPlayers,
+          teams: state.teams.map((t) => {
+            if (t.id === completedMatch.winnerId) {
+              return { ...t, wins: t.wins + 1, points: t.points + 2 };
+            }
+            if (t.id === team1.id || t.id === team2.id) {
+              return { ...t, losses: t.losses + 1 };
+            }
+            return t;
+          }),
+        });
       },
 
       playNextMatch: () => {

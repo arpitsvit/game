@@ -39,6 +39,7 @@
   --sidebar-ring: oklch(0.65 0.2 145);
   --success: oklch(0.65 0.2 145);
   --warning: oklch(0.7 0.18 50);
+  --warning-foreground: oklch(0.13 0.01 260);
 }
 
 @theme inline {
@@ -82,6 +83,7 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
 }
 
 @layer base {

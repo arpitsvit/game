@@ -119,7 +119,17 @@ function getRandomCommentary(type: string, params: Record<string, string> = {}):
     const wicketType = type.replace('wicket_', '') as keyof typeof COMMENTARY.wicket;
     templates = COMMENTARY.wicket[wicketType] || ['OUT!'];
   } else {
-    templates = (COMMENTARY as Record<string, string[]>)[type] || ['{batsman} plays the shot'];
+    const commentaryMap: Record<string, string[]> = {
+      dot: COMMENTARY.dot,
+      single: COMMENTARY.single,
+      two: COMMENTARY.two,
+      three: COMMENTARY.three,
+      four: COMMENTARY.four,
+      six: COMMENTARY.six,
+      wide: COMMENTARY.wide,
+      noBall: COMMENTARY.noBall,
+    };
+    templates = commentaryMap[type] || ['{batsman} plays the shot'];
   }
   
   let commentary = templates[Math.floor(Math.random() * templates.length)];
